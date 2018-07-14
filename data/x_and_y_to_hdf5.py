@@ -7,10 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1w3mMw7iKEXn4lDQhag6oObLWMuhOB6HD
 """
 
-!pip install deepdish
-
-!pip3 install torch torchvision
-
 import numpy as np
 import random
 import deepdish as dd
