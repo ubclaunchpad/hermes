@@ -102,3 +102,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+warp-ctc/
+Untitled.ipynb
+valid_test.h5
+​
