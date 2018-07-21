@@ -1,18 +1,18 @@
 import os
 import re
 
-#Function for adding .flac after each file number to produce the full audio file name
+#Function for adding .flac after each file number in the LibriSpeech dataset to produce the full audio file name
 def cleanlist(mylist, regex, substitution):
     tmp_list = mylist
     cleaned_list = [re.sub(regex, substitution, line) for line in tmp_list]
     return cleaned_list
 
-def function(rootdir):
+def function(rootdir): #Parse the libri speech root folder/directory 
  
     path = rootdir
     audio_file_name = []
 
-    # This for loop allows all sub directories and files to be searched
+    # This for loop allows all sub directories and files in the dataset folder to be searched
     for (path, subdirs, files) in os.walk(path):
         files = [f for f in os.listdir(path) if f.endswith('.txt')] # Specify here the format of files you hope to search from (ex: ".txt", ".flac", or ".log")
         files.sort() # file is sorted list
