@@ -2,12 +2,12 @@ import os
 import re
 
 #Function for adding .flac after each file number in the LibriSpeech dataset to produce the full audio file name
-def cleanlist(mylist, regex, substitution):
+def editlist(mylist, regex, substitution):
     tmp_list = mylist
     cleaned_list = [re.sub(regex, substitution, line) for line in tmp_list]
     return cleaned_list
 
-def function(rootdir): #Parse the libri speech root folder/directory 
+def parse_dataset_for_audioname_and_txt_matching(rootdir): #Parse the librispeech root folder/directory 
  
     path = rootdir
     audio_file_name = []
@@ -39,7 +39,7 @@ def function(rootdir): #Parse the libri speech root folder/directory
                     #return the audio filenames to a list 
                     audio_file_names = re.findall('\d+.\d+.\d+.+', line)
                     #Add ".flac" to the end of each file name
-                    audio_file_names = cleanlist(audio_file_names, r'^([\d-]+)', r'\1.flac')
+                    audio_file_names = editlist(audio_file_names, r'^([\d-]+)', r'\1.flac')
                     #Print the file name, and the corresponding speech text  
                     print(audio_file_names)
 
