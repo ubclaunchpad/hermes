@@ -6,18 +6,20 @@ import numpy as np
 import pandas as pd
 import soundfile as sf
 import librosa.display
+import h5py
 from progressbar import ProgressBar
 
 pbar = ProgressBar()
 
 # define variables
-testing_data_dir = path.abspath('cv_corpus_v1/cv-valid-test/waves')
+testing_data_dir = path.abspath('cv_corpus_v1/cv-valid-test/waves-test')
 testing_csv = 'cv_corpus_v1/cv-valid-test.csv'
 training_data_dir = path.abspath('cv_corpus_v1/cv-valid-train/waves')
 training_csv = 'cv_corpus_v1/cv-valid-train.csv'
 sample_rate = 16000
 
-def generate_spectrograms(data_dir, csv_file, output):
+
+def generate_spectrograms(data_dir, csv_file, output, data_group, labels_group):
     # read csv file
     df = pd.read_csv(
         csv_file,
@@ -28,23 +30,25 @@ def generate_spectrograms(data_dir, csv_file, output):
     )
     print(df.head())
 
-    # read audio files
-    X = []
-    Y = []
+    # h5 file to store dataset
+    file = h5py.File(output,'w')
+    data = file.create_group(data_group)
+    labels = file.create_group(labels_group)
 
+    # read audio files
+    print('current set: ' + data_dir)
     for wav_file in pbar(glob(path.join(data_dir, '*.wav'))):
         # read signal and sample_rate from wav file
-        index = int(wav_file[-10:-4]) + 1
+        index = int(wav_file[-10:-4])
         signal, sample_rate = sf.read(wav_file)
         # generate chroma spectogram using params
         chroma = librosa.feature.melspectrogram(y=signal, sr=sample_rate,
                n_fft = 400, hop_length = 160)
         chroma_t = chroma.T
-        X.append(chroma_t)
-        Y.append(df['text'][index])
-
-    dd.io.save(output, (X, Y))
+        # save into h5 file
+        data.create_dataset(str(index), data=chroma_t)
+        labels.create_dataset(str(index), data=df['text'][index + 1])
 
 # get spectograms for testing and training data
-generate_spectrograms(testing_data_dir, testing_csv, 'valid_test.h5')
-generate_spectrograms(training_data_dir, training_csv, 'valid_train.h5')
+generate_spectrograms(testing_data_dir, testing_csv, 'valid_test.h5', 'test_data', 'test_labels')
+generate_spectrograms(training_data_dir, training_csv, 'valid_train.h5', 'train_data', 'train_labels')
