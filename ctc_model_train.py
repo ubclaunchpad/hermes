@@ -1,5 +1,5 @@
 from warpctc_pytorch import CTCLoss
-from data.spectrogram_dataset import SpectrogramDataset
+from data.spectrogram_dataset import SpectrogramDataset, merge_batches
 
 import torch
 import torch.nn as nn
@@ -12,12 +12,10 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5')
+data_loader = DataLoader(dataset, collate_fn = merge_batches, batch_size = 4, shuffle = True)
+print("dataset len")
+print(dataset.__len__())
 print("\nDataset loading completed\n")
-char_to_ix = {'': 0, 'a' : 1, 'b' : 2, 'c' : 3, 'd':  4,
-             'e': 5, 'f': 6, 'g': 7, 'h':8, 'i':9, 'j': 10, 'k': 11,
-             'l': 12, 'm' : 13, 'n' : 14, 'o':15, 'p':16, 'q':17, 'r':18, 's':19, 't':20,
-             'u' : 21, 'v' : 22, 'w' : 23, 'x' : 24, 'y' : 25, 'z' : 26, ',': 27, "'" : 28, " ": 29}
-
 
 # Dimention of FFTs
 input_dim = 128
@@ -26,50 +24,46 @@ input_dim = 128
 hidden_dim = 512
 
 # Alphabet size with a blank
-output_dim = 29
+output_dim = 30
 # Well
-learning_rate = 0.01
-# Dimention of each element of the sequence of output activations (distribution for 26 alphabet letters plus blank)
+learning_rate = 1e-4
 
-model = CTCModel(input_dim, hidden_dim, output_dim)
+batch_size = 4
+
+model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
 model.to(device)
 
-loader = DataLoader(dataset, batch_size=25,
-                        shuffle=True, num_workers=0)
+optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
+#optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-ctc_loss = CTCLoss()
+ctc_loss = CTCLoss(blank=0)
 count = 0
 print("Begin training")
-for epoch in range(10):
-    for i_batch, sample_batched in enumerate(loader):
-        model.zero_grad()
-        print(i_batch)
-        print(sample_batched.shape)
-
+for epoch in range(50):
+    print("***************************")
+    print("EPOCH NUM %d" % epoch)
+    print("***************************")
+    cost_epoch_sum = 0
+    cost_tstep_sum = 0
+    for i_batch, sample_batched in enumerate(data_loader):
+        optimizer.zero_grad()
+        padded_X, seq_labels, X_lengths, Y_lengths = sample_batched
         # Get the distributions
-        seq = torch.tensor([seq], device = device)
-        log_probs = model(seq.float())
-        if (torch.cuda.is_available()):
-            log_probs = log_probs.transpose(0, 1).cuda().contiguous()
-        else:
-            log_probs = log_probs.transpose(0, 1).contiguous()
+        padded_X = padded_X.cuda()
+        log_probs = model(padded_X, X_lengths)
+        log_probs = log_probs.transpose(0, 1)
 
         log_probs.requires_grad_(True)
 
-        # Construct the labels
-        label = torch.IntTensor([char_to_ix[char] for char in label])
+        seq_labels = torch.cat(seq_labels)
 
-        # Batch size info for CTC
-        probs_sizes = torch.IntTensor([log_probs.shape[0]])
-        label_sizes = torch.IntTensor([label.shape[0]])
-
-        cost = ctc_loss(log_probs, label, probs_sizes, label_sizes)
-
-        count += 1
-        if (count % 10 == 0):
-            print(cost)
-
-        # Backprop, update gradients
+        cost = ctc_loss(log_probs, seq_labels, X_lengths, Y_lengths)
         cost.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
         optimizer.step()
+        print(cost)
+        # Backprop, update gradients
+    print("***************************")
+    print("AVG COST PER EPOCH")
+    print(cost_epoch_sum / 4076)
+    print("***************************")
