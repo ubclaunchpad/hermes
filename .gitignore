@@ -24,6 +24,10 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.h5
+*.csv
+/data/CommonVoice/cv-valid-dev
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -102,3 +106,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+warp-ctc/
+Untitled.ipynb
+valid_test.h5
+​
