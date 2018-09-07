@@ -18,10 +18,12 @@ class CTCModel(nn.Module):
         self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(4, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
 
 
-    def forward(self, X, X_lengths = []):
+    def forward(self, X, X_lengths = [], train = True):
         if (len(X_lengths) == 0):
             output_sequences, _ = self.gru(X, self.hidden[:, :1, :].contiguous())
             tag_space = self.hidden2alphabet(output_sequences)
+            if (not train):
+                return tag_space
             softmax = F.log_softmax(tag_space, dim = 2)
             return softmax
         else:
