@@ -74,7 +74,7 @@ class SpectrogramDataset(Dataset):
             padded_Y[i, 0, :] = 0
         indices = (X_seq_indices, Y_seq_indices)
         lengths = (torch.IntTensor(X_lengths[X_seq_indices]), torch.IntTensor(Y_lengths[Y_seq_indices]))
-        return padded_X, torch.DoubleTensor(padded_Y), seq_labels, indices, lengths
+        return padded_X, torch.FloatTensor(padded_Y), seq_labels, indices, lengths
 
 class Normalize(object):
 

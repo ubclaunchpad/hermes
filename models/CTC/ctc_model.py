@@ -15,7 +15,8 @@ class CTCModel(nn.Module):
         self.conv1 = torch.nn.Conv2d(1, 32, (1 , 4), stride=(1, 2), padding = 0)
         self.conv2 = torch.nn.Conv2d(32, 1, (1, 5), stride=(1, 2), padding = 0)
         self.relu = nn.ReLU()
-        self.gru = nn.GRU(input_size = 30, hidden_size = hidden_dim, num_layers = 4, bidirectional = True, batch_first = True)
+        self.gru = nn.GRU(input_size = 30, hidden_size = hidden_dim, num_layers = 4, bidirectional = True, dropout = 0.4, batch_first = True)
+        self.dp = nn.Dropout(p = 0.4)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2alphabet = nn.Linear(in_features = hidden_dim * 2, out_features = output_dim)
         self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.FloatTensor(8, batch_size, self.hidden_dim).cuda()), requires_grad=True).cuda()
@@ -40,6 +41,7 @@ class CTCModel(nn.Module):
             X.unsqueeze_(1)
             X = self.conv1(X)
             X = self.relu(X)
+            X = self.dp(X)
             X = self.conv2(X)
             X = self.relu(X)
             X = torch.transpose(X, 1, 2).squeeze().contiguous()

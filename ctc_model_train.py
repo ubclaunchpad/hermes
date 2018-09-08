@@ -69,6 +69,7 @@ def train_ctc():
 
         print("***************************")
         print("PREDICTION")
+        model = model.eval()
         xseq, yseq = dataset[0]
         xseq = torch.FloatTensor([xseq], device = device)
         xseq = norm_transform(xseq)
@@ -79,6 +80,7 @@ def train_ctc():
         for row in logprobs_numpy:
             print(row)
         decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
+        model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
         print(decoded_seq[0])
