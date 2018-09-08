@@ -13,10 +13,10 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-batch_size = 2
-"""
+batch_size = 4
+
 def train_ctc():
-    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5')
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -34,7 +34,7 @@ def train_ctc():
     # Alphabet size with a blank
     output_dim = 30
 
-    learning_rate = 1e-4
+    learning_rate = 1e-3
 
     model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
     model.to(device)
@@ -45,7 +45,7 @@ def train_ctc():
     ctc_loss = CTCLoss(blank = output_dim - 1)
     count = 0
     print("Begin training")
-    for epoch in range(50):
+    for epoch in range(100):
         print("***************************")
         print("EPOCH NUM %d" % epoch)
         print("***************************")
@@ -60,9 +60,7 @@ def train_ctc():
             padded_X = padded_X.cuda()
             log_probs = model(padded_X, X_lengths)
             log_probs = log_probs.transpose(0, 1)
-
             log_probs.requires_grad_(True)
-            seq_labels = torch.cat(seq_labels)
             cost = ctc_loss(log_probs, seq_labels, X_lengths, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
@@ -85,11 +83,11 @@ def train_ctc():
         print("Prediction: ", decoded_seq)
         print(decoded_seq[0])
         print("***************************")
+
+
 """
-
-
 def train_ctc():
-    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5')
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -157,5 +155,5 @@ def train_ctc():
         print("Prediction: ", decoded_seq)
         print(decoded_seq[0])
         print("***************************")
-
+"""
 train_ctc()

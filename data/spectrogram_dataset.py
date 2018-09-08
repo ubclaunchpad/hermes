@@ -52,6 +52,7 @@ class SpectrogramDataset(Dataset):
             sequence = self.transform(sequence)
             padded_X[i, 0:x_len, :] = sequence[:x_len, :]
             seq_labels[i] = label
+        seq_labels = torch.cat(seq_labels)
         if (self.model_ctc == True):
             return padded_X, seq_labels, torch.IntTensor(X_lengths[X_seq_indices]), torch.IntTensor(Y_lengths[X_seq_indices])
         # https://discuss.pytorch.org/t/solved-multiple-packedsequence-input-ordering/2106
@@ -73,7 +74,7 @@ class SpectrogramDataset(Dataset):
             padded_Y[i, 0, :] = 0
         indices = (X_seq_indices, Y_seq_indices)
         lengths = (torch.IntTensor(X_lengths[X_seq_indices]), torch.IntTensor(Y_lengths[Y_seq_indices]))
-        return padded_X, torch.FloatTensor(padded_Y), seq_labels, indices, lengths
+        return padded_X, torch.DoubleTensor(padded_Y), seq_labels, indices, lengths
 
 class Normalize(object):
 

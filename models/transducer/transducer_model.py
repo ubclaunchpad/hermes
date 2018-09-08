@@ -57,7 +57,7 @@ class TransducerModel(nn.Module):
         return prob_density_normalized, Y_lengths
 
     def transcription_net(self, X, X_lengths = []):
-        if (len(X_lengths) == []):
+        if (len(X_lengths) == 0):
             out_transcript, _ = self.transcription_gru(X, self.hidden_trascription)
             transcript_dist = self.hidden2density_transcript(out_transcript)
             return transcript_dist
@@ -69,7 +69,7 @@ class TransducerModel(nn.Module):
         return transcript_dist
 
     def prediction_net(self, Y, Y_lengths = []):
-        if (len(Y_lengths) == []):
+        if (len(Y_lengths) == 0):
             out_prediction, _ = self.prediction_gru(Y, self.hidden_prediction)
             predict_dist = self.hidden2density_pred(out_prediction)
             return predict_dist

@@ -19,7 +19,7 @@ def train_transducer():
     norm_transform = Normalize(dataset)
     decoder = RNNTransducer(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
-    batch_size = 2
+    batch_size = 4
 
     data_loader = DataLoader(dataset, collate_fn = dataset.merge_batches, batch_size = batch_size, shuffle = True)
     print("dataset len")
@@ -46,7 +46,7 @@ def train_transducer():
     transducer_loss = transducer.TransducerLoss(blank_label = 0)
     count = 0
     print("Begin training")
-    for epoch in range(50):
+    for epoch in range(100):
         print("***************************")
         print("EPOCH NUM %d" % epoch)
         print("***************************")
@@ -64,12 +64,12 @@ def train_transducer():
 
             prob_matrix, Y_lengths = model(padded_X, padded_Y, indices, lengths)
             prob_matrix.requires_grad_(True)
-            seq_labels = torch.cat(seq_labels)
             cost = transducer_loss(prob_matrix, seq_labels, X_lengths, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
             optimizer.step()
-            print(cost)
+            print(cost)RuntimeError: CuDNN error: CUDNN_STATUS_EXECUTION_FAILED
+
             # Backprop, update gradients
         print("***************************")
         print("PREDICTION")
@@ -112,7 +112,7 @@ def train_transducer():
     # Alphabet size with a blank
     output_dim = 30
 
-    learning_rate = 1e-3
+    learning_rate = 1e-2
 
     model = TransducerModel(input_dim, hidden_dim, output_dim, batch_size)
     model.to(device)
@@ -156,4 +156,6 @@ def train_transducer():
             torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
             optimizer.step()
             print(cost)
+
+train_transducer()
 """
