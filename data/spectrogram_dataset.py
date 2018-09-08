@@ -2,6 +2,7 @@ import h5py
 import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+import random
 
 class SpectrogramDataset(Dataset):
     """
@@ -15,6 +16,7 @@ class SpectrogramDataset(Dataset):
                             'u' : 20, 'v' : 21, 'w' : 22, 'x' : 23, 'y' : 24, 'z' : 25, "'" : 26, " ": 27, "_": 28}
         self.hdf5 = h5py.File(hdf5_location, 'r')
         self.model_ctc = model_ctc
+        self.myidx = 0
 
     def __len__(self):
         return len(self.hdf5["train_data"])
@@ -78,7 +80,7 @@ class SpectrogramDataset(Dataset):
 
 class Normalize(object):
 
-    def __init__(self, dataset, samples = 500):
+    def __init__(self, dataset, samples = 4076):
         stacked = []
         for i in range(samples):
             stacked += [k for k in dataset[i][0]]

@@ -66,6 +66,7 @@ def train_ctc():
             torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
             optimizer.step()
             print(cost)
+            cost_epoch_sum += float(cost)
 
         print("***************************")
         print("PREDICTION")
@@ -83,7 +84,7 @@ def train_ctc():
         model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
-        print(decoded_seq[0])
+        #print("Avg cost per epoch: ", cost_epoch_sum / 4076)
         print("***************************")
 
 
