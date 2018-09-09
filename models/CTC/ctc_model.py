@@ -14,13 +14,13 @@ class CTCModel(nn.Module):
         # with dimensionality hidden_dim.
         self.conv1 = torch.nn.Conv2d(1, 32,  (1, 3), stride=(1, 2), padding = 0)
         self.conv2 = torch.nn.Conv2d(32, 32, (1, 6), stride=(1, 2), padding = 0)
-        self.conv3 = torch.nn.Conv2d(32, 4, (1, 6), stride=(1, 2), padding = 0)
+        self.conv3 = torch.nn.Conv2d(32, 4, (3, 6), stride=(2, 2), padding = 0)
         self.relu = nn.ReLU()
-        self.gru = nn.GRU(input_size = 48, hidden_size = hidden_dim, num_layers = 4, bidirectional = True, batch_first = True)
+        self.gru = nn.GRU(input_size = 48, hidden_size = hidden_dim, num_layers = 2, bidirectional = True, batch_first = True)
         self.dp = nn.Dropout(p = 0.4)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2alphabet = nn.Linear(in_features = hidden_dim * 2, out_features = output_dim)
-        self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.FloatTensor(8, batch_size, self.hidden_dim).cuda()), requires_grad=True).cuda()
+        self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.FloatTensor(4, batch_size, self.hidden_dim).cuda()), requires_grad=True).cuda()
 
     def forward(self, X, X_lengths = [], train = True):
         if (len(X_lengths) == 0):
@@ -43,7 +43,7 @@ class CTCModel(nn.Module):
             softmax = F.log_softmax(tag_space, dim = 2)
             return softmax
         else:
-            batch_size, seq_len, _ = X.size()
+            batch_size, _, _ = X.size()
             X.unsqueeze_(1)
             if (torch.isnan(X).any()):
                 print("NAN FROM DATALOADER")
@@ -77,9 +77,9 @@ class CTCModel(nn.Module):
                 raise Exception
 
             X = torch.transpose(X, 1, 2)
-            filter, feat = X.shape[2], X.shape[3]
+            seq_len, filter, feat = X.shape[1], X.shape[2], X.shape[3]
             X = X.contiguous().view(batch_size, seq_len, filter * feat)
-            input_sequences = torch.nn.utils.rnn.pack_padded_sequence(X, X_lengths, batch_first=True)
+            input_sequences = torch.nn.utils.rnn.pack_padded_sequence(X, (X_lengths - 2) // 2, batch_first=True)
             output_sequences, _ = self.gru(input_sequences, self.hidden)
             if (torch.isnan(X).any()):
                 print("GRU")
