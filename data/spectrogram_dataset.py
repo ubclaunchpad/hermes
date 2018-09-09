@@ -51,7 +51,7 @@ class SpectrogramDataset(Dataset):
             sequence, label = torch.FloatTensor(batch[seq_num][0]), batch[seq_num][1]
             label = torch.IntTensor([self.char_to_ix.get(char, 28) for char in label])
             x_len, y_len = X_lengths[seq_num], Y_lengths[seq_num]
-            sequence = self.transform(sequence)
+            sequence = self.transform(sequence.cuda())
             padded_X[i, 0:x_len, :] = sequence[:x_len, :]
             seq_labels[i] = label
         seq_labels = torch.cat(seq_labels)
@@ -84,8 +84,8 @@ class Normalize(object):
         stacked = []
         for i in range(samples):
             stacked += [k for k in dataset[i][0]]
-        self.mu = torch.FloatTensor(np.mean(stacked, axis=0))
-        self.std = torch.FloatTensor(np.std(stacked, axis=0))
+        self.mu = torch.FloatTensor(np.mean(stacked, axis=0)).cuda()
+        self.std = torch.FloatTensor(np.std(stacked, axis=0)).cuda()
 
     def __call__(self, sample):
         return (sample - self.mu)/self.std
