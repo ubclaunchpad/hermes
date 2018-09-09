@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-batch_size = 4
+batch_size = 24
 
 def train_ctc():
     dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
@@ -38,7 +38,6 @@ def train_ctc():
 
     model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
     model.to(device)
-    model = model.double()
 
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
     optimizer = optim.Adam(model.parameters(), lr = learning_rate)
@@ -60,27 +59,28 @@ def train_ctc():
             # Get the distributions
             padded_X = padded_X.cuda()
             log_probs = model(padded_X, X_lengths)
+
             log_probs = log_probs.transpose(0, 1)
             log_probs.requires_grad_(True)
             cost = ctc_loss(log_probs.float(), seq_labels, X_lengths, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
             optimizer.step()
-            print(cost)
+            #print(cost)
             cost_epoch_sum += float(cost)
 
         print("***************************")
         print("PREDICTION")
         model = model.eval()
         xseq, yseq = dataset[0]
-        xseq = torch.DoubleTensor([xseq], device = device)
+        xseq = torch.FloatTensor([xseq], device = device)
         xseq = norm_transform(xseq)
-        print(type(xseq))
-        print(xseq)
+        #print(type(xseq))
+        #print(xseq)
         log_probs = model(xseq.double())
         logprobs_numpy = log_probs[0].data.cpu().numpy()
-        for row in logprobs_numpy:
-            print(row)
+        #for row in logprobs_numpy:
+        #    print(row)
         decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
         model = model.train()
         print("Ground truth: ", yseq)
@@ -111,7 +111,7 @@ def train_ctc():
 
     learning_rate = 1e-3
 
-    model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
+    model = CTCModel(inThanks. I am closing this because torch.isnan() is now available thanks to #5273 and torch.nan is not really important (torch.tensor(float('nan')) works if it is required).put_dim, hidden_dim, output_dim, batch_size)
     model.to(device)
 
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)

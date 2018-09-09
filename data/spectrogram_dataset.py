@@ -41,14 +41,14 @@ class SpectrogramDataset(Dataset):
             X_lengths[i] = x_length
             Y_lengths[i] = y_length
         longest_seq_x = max(X_lengths)
-        # In descending orderDoubleTensor
+        # In descending orderFloatTensor
         X_seq_indices = np.argsort(-X_lengths)
         # Batch is represented as batch_size x longest_sequence x feature_dim
-        padded_X = torch.zeros((batch_size, longest_seq_x, 128)).type(torch.DoubleTensor)
+        padded_X = torch.zeros((batch_size, longest_seq_x, 128)).type(torch.FloatTensor)
         seq_labels = [0] * batch_size
         # copy over the actual sequences
         for i, seq_num in enumerate(X_seq_indices):
-            sequence, label = torch.DoubleTensor(batch[seq_num][0]), batch[seq_num][1]
+            sequence, label = torch.FloatTensor(batch[seq_num][0]), batch[seq_num][1]
             label = torch.IntTensor([self.char_to_ix.get(char, 28) for char in label])
             x_len, y_len = X_lengths[seq_num], Y_lengths[seq_num]
             sequence = self.transform(sequence)
@@ -76,7 +76,7 @@ class SpectrogramDataset(Dataset):
             padded_Y[i, 0, :] = 0
         indices = (X_seq_indices, Y_seq_indices)
         lengths = (torch.IntTensor(X_lengths[X_seq_indices]), torch.IntTensor(Y_lengths[Y_seq_indices]))
-        return padded_X, torch.DoubleTensor(padded_Y), seq_labels, indices, lengths
+        return padded_X, torch.FloatTensor(padded_Y), seq_labels, indices, lengths
 
 class Normalize(object):
 
@@ -84,8 +84,8 @@ class Normalize(object):
         stacked = []
         for i in range(samples):
             stacked += [k for k in dataset[i][0]]
-        self.mu = torch.DoubleTensor(np.mean(stacked, axis=0))
-        self.std = torch.DoubleTensor(np.std(stacked, axis=0))
+        self.mu = torch.FloatTensor(np.mean(stacked, axis=0))
+        self.std = torch.FloatTensor(np.std(stacked, axis=0))
 
     def __call__(self, sample):
         return (sample - self.mu)/self.std
