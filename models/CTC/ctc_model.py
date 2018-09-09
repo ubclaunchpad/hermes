@@ -20,7 +20,7 @@ class CTCModel(nn.Module):
         self.dp = nn.Dropout(p = 0.4)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2alphabet = nn.Linear(in_features = hidden_dim * 2, out_features = output_dim)
-        self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.FloatTensor(4, batch_size, self.hidden_dim).cuda()), requires_grad=True).cuda()
+        self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.DoubleTensor(4, batch_size, self.hidden_dim).cuda()), requires_grad=True).cuda()
 
     def forward(self, X, X_lengths = [], train = True):
         if (len(X_lengths) == 0):

@@ -38,6 +38,7 @@ def train_ctc():
 
     model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
     model.to(device)
+    model = model.double()
 
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
     optimizer = optim.Adam(model.parameters(), lr = learning_rate)
@@ -61,7 +62,7 @@ def train_ctc():
             log_probs = model(padded_X, X_lengths)
             log_probs = log_probs.transpose(0, 1)
             log_probs.requires_grad_(True)
-            cost = ctc_loss(log_probs, seq_labels, X_lengths, Y_lengths)
+            cost = ctc_loss(log_probs.float(), seq_labels, X_lengths, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
             optimizer.step()
@@ -72,11 +73,11 @@ def train_ctc():
         print("PREDICTION")
         model = model.eval()
         xseq, yseq = dataset[0]
-        xseq = torch.FloatTensor([xseq], device = device)
+        xseq = torch.DoubleTensor([xseq], device = device)
         xseq = norm_transform(xseq)
         print(type(xseq))
         print(xseq)
-        log_probs = model(xseq.float().cuda())
+        log_probs = model(xseq.double())
         logprobs_numpy = log_probs[0].data.cpu().numpy()
         for row in logprobs_numpy:
             print(row)
@@ -84,7 +85,7 @@ def train_ctc():
         model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
-        #print("Avg cost per epoch: ", cost_epoch_sum / 4076)
+        print("Avg cost per epoch: ", cost_epoch_sum / 4076)
         print("***************************")
 
 
