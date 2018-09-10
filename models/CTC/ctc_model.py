@@ -12,11 +12,11 @@ class CTCModel(nn.Module):
         self.output_dim = output_dim
         # The gru takes word embeddings as inputs, and outputs hidden states
         # with dimensionality hidden_dim.
-        self.conv1 = torch.nn.Conv2d(1, 32,  (1, 3), stride=(1, 2), padding = 0)
-        self.conv2 = torch.nn.Conv2d(32, 32, (1, 6), stride=(1, 2), padding = 0)
-        self.conv3 = torch.nn.Conv2d(32, 4, (3, 6), stride=(2, 2), padding = 0)
+        self.conv1 = torch.nn.Conv2d(1, 32,  (3, 3), stride=(2, 2), padding = 0)
+        self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(2, 2), padding = 0)
+        self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(1, 2), padding = 0)
         self.relu = nn.ReLU()
-        self.gru = nn.GRU(input_size = 48, hidden_size = hidden_dim, num_layers = 2, bidirectional = True, batch_first = True)
+        self.gru = nn.GRU(input_size = 56, hidden_size = hidden_dim, num_layers = 2, bidirectional = True, batch_first = True)
         self.dp = nn.Dropout(p = 0.4)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2alphabet = nn.Linear(in_features = hidden_dim * 2, out_features = output_dim)
@@ -56,39 +56,16 @@ class CTCModel(nn.Module):
                 raise Exception
 
             X = self.relu(X)
-            if (torch.isnan(X).any()):
-                print("FIRST RELU")
-                raise Exception
-
-            #X = self.dp(X)
             X = self.conv2(X)
-            if (torch.isnan(X).any()):
-                print("SECOND CONV")
-                raise Exception
-
             X = self.relu(X)
-            if (torch.isnan(X).any()):
-                print("SECOND RELU")
-                raise Exception
-
             X = self.conv3(X)
-            if (torch.isnan(X).any()):
-                print("THIRD CONV")
-                raise Exception
-
             X = torch.transpose(X, 1, 2)
             seq_len, filter, feat = X.shape[1], X.shape[2], X.shape[3]
             X = X.contiguous().view(batch_size, seq_len, filter * feat)
-            input_sequences = torch.nn.utils.rnn.pack_padded_sequence(X, (X_lengths - 2) // 2, batch_first=True)
+            input_sequences = torch.nn.utils.rnn.pack_padded_sequence(X, (((X_lengths - 2) // 2) - 2) // 2 - 2, batch_first=True)
             output_sequences, _ = self.gru(input_sequences, self.hidden)
-            if (torch.isnan(X).any()):
-                print("GRU")
-                raise Exception
 
             output_sequences, _ = torch.nn.utils.rnn.pad_packed_sequence(output_sequences, batch_first=True)
             tag_space = self.hidden2alphabet(output_sequences)
-            if (torch.isnan(X).any()):
-                print("LINEAR")
-                raise Exception
 
             return tag_space

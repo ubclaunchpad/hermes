@@ -16,7 +16,7 @@ print(device)
 batch_size = 8
 
 def train_ctc():
-    dataset = SpectrogramDataset('data/CommonVoice/valid_test.h5', model_ctc = True)
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -62,7 +62,7 @@ def train_ctc():
 
             log_probs = log_probs.transpose(0, 1)
             log_probs.requires_grad_(True)
-            cost = ctc_loss(log_probs.float(), seq_labels, (X_lengths - 2) // 2, Y_lengths)
+            cost = ctc_loss(log_probs.float(), seq_labels, (((X_lengths - 2) // 2) - 2) // 2 - 2, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.75)
             optimizer.step()
@@ -163,6 +163,6 @@ def train_ctc():
 
 while(True):
 	try:
-		train_ctc()
+	train_ctc()
 	except Exception:
 		print("caught nan")
