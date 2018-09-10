@@ -13,10 +13,10 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-batch_size = 4
+batch_size = 8
 
 def train_ctc():
-    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
+    dataset = SpectrogramDataset('data/CommonVoice/valid_test.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -45,7 +45,7 @@ def train_ctc():
     ctc_loss = CTCLoss(blank = output_dim - 1)
     count = 0
     print("Begin training")
-    for epoch in range(100):
+    for epoch in range(200):
         print("***************************")
         print("EPOCH NUM %d" % epoch)
         print("***************************")
@@ -64,7 +64,7 @@ def train_ctc():
             log_probs.requires_grad_(True)
             cost = ctc_loss(log_probs.float(), seq_labels, (X_lengths - 2) // 2, Y_lengths)
             cost.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.75)
             optimizer.step()
             #print(cost)
             cost_epoch_sum += float(cost)
@@ -160,4 +160,9 @@ def train_ctc():
         print(decoded_seq[0])
         print("***************************")
 """
-train_ctc()
+
+while(True):
+	try:
+		train_ctc()
+	except Exception:
+		print("caught nan")

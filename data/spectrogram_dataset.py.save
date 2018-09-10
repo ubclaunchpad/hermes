@@ -3,7 +3,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import random
-import librosa
 
 class SpectrogramDataset(Dataset):
     """
@@ -24,7 +23,10 @@ class SpectrogramDataset(Dataset):
 
     def __getitem__(self, idx):
         flat = np.concatenate(self.hdf5["train_data"][idx],  axis = 0)
-        return (librosa.power_to_db(flat.reshape(-1, 128)), self.hdf5["train_labels"][idx])
+        print("yes")
+        print(librosa.power_to_db(flat))
+	
+        return (flat.reshape(-1, 128), self.hdf5["train_labels"][idx])
 
     def set_transform(self, transform):
         self.transform = transform
