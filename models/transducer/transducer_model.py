@@ -6,13 +6,13 @@ import numpy as np
 
 
 class TransducerModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, batch_size):
+    def __init__(self, input_dim, hidden_dim, output_dim, rnn_layers, batch_size):
         super(TransducerModel, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
         self.batch_size = batch_size
-        self.transcription_gru = nn.GRU(input_size = input_dim, hidden_size = hidden_dim, num_layers = 2, bidirectional = True, batch_first = True)
+        self.transcription_gru = nn.GRU(input_size = input_dim, hidden_size = hidden_dim, num_layers = rnn_layers, bidirectional = True, batch_first = True)
         self.prediction_gru = nn.GRU(input_size = 29, hidden_size = hidden_dim, num_layers = 2, batch_first = True)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2density_transcript = nn.Linear(in_features = hidden_dim * 2, out_features = hidden_dim)
@@ -20,14 +20,14 @@ class TransducerModel(nn.Module):
         self.relu = nn.ReLU()
         self.density2softmax = nn.Linear(in_features = hidden_dim, out_features = output_dim)
         # Hidden states
-        self.hidden_trascription = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(4, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
+        self.hidden_trascription = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(2 * rnn_layers, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
         self.hidden_prediction = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(2, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
         # Conv and relu
         self.conv1 = torch.nn.Conv2d(1, 32,  (3, 3), stride=(2, 2), padding = 0)
         self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(2, 2), padding = 0)
         self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(1, 2), padding = 0)
         self.relu = nn.ReLU()
-        
+
     def forward(self, X, Y, indices = (), lengths = ()):
         if (indices == ()):
             transcript_dist = self.transcription_net(X)

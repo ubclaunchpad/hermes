@@ -14,12 +14,12 @@ import numpy as np
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-def train_transducer():
+def train_transducer(rnn_layers, learning_rate):
     dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5')
     norm_transform = Normalize(dataset)
     decoder = RNNTransducer(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
-    batch_size = 4
+    batch_size = 8
 
     data_loader = DataLoader(dataset, collate_fn = dataset.merge_batches, batch_size = batch_size, shuffle = True)
     print("dataset len")
@@ -35,9 +35,7 @@ def train_transducer():
     # Alphabet size with a blank
     output_dim = 30
 
-    learning_rate = 1e-3
-
-    model = TransducerModel(input_dim, hidden_dim, output_dim, batch_size)
+    model = TransducerModel(input_dim, hidden_dim, output_dim, rnn_layers, batch_size)
     model.to(device)
 
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
@@ -68,9 +66,12 @@ def train_transducer():
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
             optimizer.step()
-            print(cost)RuntimeError: CuDNN error: CUDNN_STATUS_EXECUTION_FAILED
-
+            cost_epoch_sum += float(cost)
             # Backprop, update gradients
+
+        # TODO: Decoding
+        print("Avg cost per epoch: ", cost_epoch_sum / 4076)
+        """
         print("***************************")
         print("PREDICTION")
         xseq, yseq = dataset[0]
@@ -87,7 +88,18 @@ def train_transducer():
         print("Prediction: ", decoded_seq)
         print(decoded_seq[0])
         print("***************************")
-train_transducer()
+        """
+while(True):
+    learning_rates = [1e-3, 1e-4]
+    num_rnn_layers = [2, 3]
+    for rnn_layers in num_rnn_layers:
+        for learning_rate in learning_rates:
+            while True:
+                try:
+                    train_transducer(rnn_layers, learning_rate)
+                    break
+                except Exception:
+                    print("caught nan")
 
 """
 def train_transducer():

@@ -17,8 +17,18 @@ batch_size = 8
 
 call_num = 0
 
-def train_ctc():
-    dataset = SpectrogramDataset('data/CommonVoice/valid_test.h5', model_ctc = True)
+# Dimention of FFTs
+input_dim = 128
+
+# Dimention of hidden state
+hidden_dim = 256
+
+# Alphabet size with a blank
+output_dim = 30
+
+
+def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -27,21 +37,7 @@ def train_ctc():
     print(dataset.__len__())
     print("\nDataset loading completed\n")
 
-    # Dimention of FFTs
-    input_dim = 128
-
-    # Dimention of hidden state
-    hidden_dim = 256
-
-    # Alphabet size with a blank
-    output_dim = 30
-    if (call_num == 0):
-        learning_rate = 1e-2
-    elif (call_num == 1):
-        learning_rate = 1e-3
-    else:
-        learning_rate = 1e-4
-    model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
+    model = CTCModel(input_dim, hidden_dim, output_dim, rnn_num_layers, batch_size)
     model.to(device)
 
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
@@ -67,11 +63,11 @@ def train_ctc():
 
             log_probs = log_probs.transpose(0, 1)
             log_probs.requires_grad_(True)
-            cost = ctc_loss(log_probs.float(), seq_labels, (((X_lengths - 2) // 2) - 2) // 2 - 2, Y_lengths)
+            cost = ctc_loss(log_probs.float(), seq_labels, (((X_lengths - 8) // 2) - 2) // 2, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
             optimizer.step()
-            #print(cost)
+            print(cost)
             cost_epoch_sum += float(cost)
 
         print("***************************")
@@ -88,7 +84,6 @@ def train_ctc():
         print("Prediction: ", decoded_seq)
         print("Avg cost per epoch: ", cost_epoch_sum / 4076)
         print("***************************")
-
 
 """
 def train_ctc():
@@ -163,8 +158,13 @@ def train_ctc():
 """
 
 while(True):
-	try:
-		train_ctc()
-		call_num += 1
-	except Exception:
-		print("caught nan")
+    learning_rates = [1e-3, 1e-4]
+    num_rnn_layers = [2, 3]
+    for rnn_layers in num_rnn_layers:
+        for learning_rate in learning_rates:
+            while True:
+                try:
+                    train_ctc(rnn_layers, learning_rate)
+                    break
+                except Exception:
+                    print("caught nan")
