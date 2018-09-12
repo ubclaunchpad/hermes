@@ -22,7 +22,12 @@ class TransducerModel(nn.Module):
         # Hidden states
         self.hidden_trascription = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(4, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
         self.hidden_prediction = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(2, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
-
+        # Conv and relu
+        self.conv1 = torch.nn.Conv2d(1, 32,  (3, 3), stride=(2, 2), padding = 0)
+        self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(2, 2), padding = 0)
+        self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(1, 2), padding = 0)
+        self.relu = nn.ReLU()
+        
     def forward(self, X, Y, indices = (), lengths = ()):
         if (indices == ()):
             transcript_dist = self.transcription_net(X)

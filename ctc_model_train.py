@@ -75,12 +75,8 @@ def train_ctc():
         xseq, yseq = dataset[0]
         xseq = torch.FloatTensor([xseq])
         xseq = norm_transform(xseq.cuda())
-        #print(type(xseq))
-        #print(xseq)
         log_probs = model(xseq.cuda())
         logprobs_numpy = log_probs[0].data.cpu().numpy()
-        #for row in logprobs_numpy:
-        #    print(row)
         decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
         model = model.train()
         print("Ground truth: ", yseq)

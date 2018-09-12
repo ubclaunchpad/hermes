@@ -12,9 +12,12 @@ class CTCModel(nn.Module):
         self.output_dim = output_dim
         # The gru takes word embeddings as inputs, and outputs hidden states
         # with dimensionality hidden_dim.
-        self.conv1 = torch.nn.Conv2d(1, 32,  (3, 3), stride=(2, 2), padding = 0)
-        self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(2, 2), padding = 0)
-        self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(1, 2), padding = 0)
+        self.conv1 = torch.nn.Conv2d(1,  32, (3, 3), stride=(1, 1), padding = 0)
+        self.conv2 = torch.nn.Conv2d(32, 48, (3, 3), stride=(1, 1), padding = 0)
+        self.conv3 = torch.nn.Conv2d(48, 64, (3, 3), stride=(1, 1), padding = 0)
+        self.conv4 = torch.nn.Conv2d(64, 64, (3, 3), stride=(2, 2), padding = 0)
+        self.conv5 = torch.nn.Conv2d(64, 32, (3, 4), stride=(2, 2), padding = 0)
+
         self.relu = nn.ReLU()
         self.gru = nn.GRU(input_size = 56, hidden_size = hidden_dim, num_layers = 2, bidirectional = True, batch_first = True)
         self.dp = nn.Dropout(p = 0.4)
@@ -31,6 +34,10 @@ class CTCModel(nn.Module):
             X = self.conv2(X)
             X = self.relu(X)
             X = self.conv3(X)
+            X = self.relu(X)
+            X = self.conv4(X)
+            X = self.relu(X)
+            X = self.conv5(X)
             X = torch.transpose(X, 1, 2)
             print(X.size())
             batch, time, filter, feat = X.size()
@@ -59,6 +66,11 @@ class CTCModel(nn.Module):
             X = self.conv2(X)
             X = self.relu(X)
             X = self.conv3(X)
+            X = self.relu(X)
+            X = self.conv4(X)
+            X = self.relu(X)
+            X = self.conv5(X)
+            
             X = torch.transpose(X, 1, 2)
             seq_len, filter, feat = X.shape[1], X.shape[2], X.shape[3]
             X = X.contiguous().view(batch_size, seq_len, filter * feat)
