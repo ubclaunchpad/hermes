@@ -16,11 +16,11 @@ class CTCModel(nn.Module):
         self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(2, 2), padding = 0)
         self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(1, 2), padding = 0)
         self.relu = nn.ReLU()
-        self.gru = nn.GRU(input_size = 56, hidden_size = hidden_dim, num_layers = 2, bidirectional = True, batch_first = True)
+        self.gru = nn.GRU(input_size = 56, hidden_size = hidden_dim, num_layers = 3, bidirectional = True, batch_first = True)
         self.dp = nn.Dropout(p = 0.4)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2alphabet = nn.Linear(in_features = hidden_dim * 2, out_features = output_dim)
-        self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.FloatTensor(4, batch_size, self.hidden_dim).cuda()), requires_grad=True).cuda()
+        self.hidden = nn.Parameter(nn.init.xavier_uniform_(torch.FloatTensor(6, batch_size, self.hidden_dim).cuda()), requires_grad=True).cuda()
 
     def forward(self, X, X_lengths = [], train = True):
         if (len(X_lengths) == 0):
