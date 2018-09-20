@@ -54,6 +54,7 @@ def train_transducer(rnn_layers, learning_rate):
             optimizer.zero_grad()
             padded_X, padded_Y, seq_labels, indices, lengths = sample_batched
             X_lengths, Y_lengths = lengths
+            X_lengths = (X_lengths - 6) // 2
             if (len(X_lengths) < batch_size):
                 break
             # Get the distributions

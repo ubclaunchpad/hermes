@@ -12,7 +12,7 @@ class TransducerModel(nn.Module):
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
         self.batch_size = batch_size
-        self.transcription_gru = nn.GRU(input_size = input_dim, hidden_size = hidden_dim, num_layers = rnn_layers, bidirectional = True, batch_first = True)
+        self.transcription_gru = nn.GRU(input_size = 56, hidden_size = hidden_dim, num_layers = rnn_layers, bidirectional = True, batch_first = True)
         self.prediction_gru = nn.GRU(input_size = 29, hidden_size = hidden_dim, num_layers = 2, batch_first = True)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2density_transcript = nn.Linear(in_features = hidden_dim * 2, out_features = hidden_dim)
@@ -23,10 +23,9 @@ class TransducerModel(nn.Module):
         self.hidden_trascription = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(2 * rnn_layers, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
         self.hidden_prediction = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(2, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
         # Conv and relu
-        self.conv1 = torch.nn.Conv2d(1, 32,  (3, 3), stride=(2, 2), padding = 0)
-        self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(2, 2), padding = 0)
-        self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(1, 2), padding = 0)
-        self.relu = nn.ReLU()
+        self.conv1 = torch.nn.Conv2d(1, 32,  (3, 3), stride=(1, 2), padding = 0)
+        self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(1, 2), padding = 0)
+        self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(2, 2), padding = 0)
 
     def forward(self, X, Y, indices = (), lengths = ()):
         if (indices == ()):
@@ -39,7 +38,6 @@ class TransducerModel(nn.Module):
             prob_density = self.density2softmax(prob_density)
             prob_density_normalized = F.log_softmax(prob_density, dim = 3)
             return prob_density_normalized, ()
-
         X_seq_indices, Y_seq_indices = indices
         X_lengths, Y_lengths = lengths
         # Run transcription network
@@ -63,10 +61,16 @@ class TransducerModel(nn.Module):
 
     def transcription_net(self, X, X_lengths = []):
         if (len(X_lengths) == 0):
+            print(in_ffts.shape)
             out_transcript, _ = self.transcription_gru(X, self.hidden_trascription)
             transcript_dist = self.hidden2density_transcript(out_transcript)
             return transcript_dist
-        in_ffts = torch.nn.utils.rnn.pack_padded_sequence(X, X_lengths, batch_first=True)
+        in_ffts = self.conv1(X)
+        in_ffts = self.relu(in_ffts)
+        in_ffts = self.conv2(in_ffts)
+        in_ffts = self.relu(in_ffts)
+        in_ffts = self.conv3(X)
+        in_ffts = torch.nn.utils.rnn.pack_padded_sequence(in_ffts, X_lengths, batch_first=True)
         out_transcript, _ = self.transcription_gru(in_ffts, self.hidden_trascription)
         out_transcript, _ = torch.nn.utils.rnn.pad_packed_sequence(out_transcript, batch_first=True)
         # Should be Batch x T x Alphabet
