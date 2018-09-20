@@ -65,12 +65,17 @@ class TransducerModel(nn.Module):
             out_transcript, _ = self.transcription_gru(X, self.hidden_trascription)
             transcript_dist = self.hidden2density_transcript(out_transcript)
             return transcript_dist
+        X.unsqueeze_(1)
         in_ffts = self.conv1(X)
         in_ffts = self.relu(in_ffts)
         in_ffts = self.conv2(in_ffts)
         in_ffts = self.relu(in_ffts)
         in_ffts = self.conv3(X)
-        in_ffts = torch.nn.utils.rnn.pack_padded_sequence(in_ffts, X_lengths, batch_first=True)
+        X = torch.transpose(in_ffts, 1, 2)
+        seq_len, filter, feat = X.shape[1], X.shape[2], X.shape[3]
+        X = X.contiguous().view(batch_size, seq_len, filter * feat)
+
+        in_ffts = torch.nn.utils.rnn.pack_padded_sequence(X, X_lengths, batch_first=True)
         out_transcript, _ = self.transcription_gru(in_ffts, self.hidden_trascription)
         out_transcript, _ = torch.nn.utils.rnn.pad_packed_sequence(out_transcript, batch_first=True)
         # Should be Batch x T x Alphabet
