@@ -20,7 +20,7 @@ class SpectrogramDataset(Dataset):
         self.myidx = 0
 
     def __len__(self):
-        return len(self.hdf5["train_data"])
+        return 50000
 
     def __getitem__(self, idx):
         flat = np.concatenate(self.hdf5["train_data"][idx],  axis = 0)
