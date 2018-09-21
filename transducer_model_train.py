@@ -20,7 +20,7 @@ def train_transducer(rnn_layers, learning_rate):
     norm_transform = Normalize(dataset)
     decoder = RNNTransducer(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
-    batch_size = 2
+    batch_size = 8
 
     data_loader = DataLoader(dataset, collate_fn = dataset.merge_batches, batch_size = batch_size, shuffle = True)
     print("dataset len")
@@ -56,6 +56,8 @@ def train_transducer(rnn_layers, learning_rate):
             optimizer.zero_grad()
             padded_X, padded_Y, seq_labels, indices, lengths = sample_batched
             X_lengths, Y_lengths = lengths
+            if (X_lengths[0] > 2500):
+                continue
             X_lengths = (X_lengths - 6) // 2
             lengths = (X_lengths, Y_lengths)
             if (len(X_lengths) < batch_size):

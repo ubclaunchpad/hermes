@@ -13,7 +13,7 @@ class TransducerModel(nn.Module):
         self.output_dim = output_dim
         self.batch_size = batch_size
         self.transcription_gru = nn.GRU(input_size = 56, hidden_size = hidden_dim, num_layers = rnn_layers, bidirectional = True, batch_first = True)
-        self.prediction_gru = nn.GRU(input_size = 29, hidden_size = hidden_dim, num_layers = 2, batch_first = True)
+        self.prediction_gru = nn.GRU(input_size = 29, hidden_size = hidden_dim, num_layers = 1, batch_first = True)
         # The linear layer that maps from hidden state space to tag space
         self.hidden2density_transcript = nn.Linear(in_features = hidden_dim * 2, out_features = hidden_dim)
         self.hidden2density_pred = nn.Linear(in_features = hidden_dim, out_features = hidden_dim)
@@ -21,7 +21,7 @@ class TransducerModel(nn.Module):
         self.density2softmax = nn.Linear(in_features = hidden_dim, out_features = output_dim)
         # Hidden states
         self.hidden_trascription = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(2 * rnn_layers, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
-        self.hidden_prediction = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(2, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
+        self.hidden_prediction = nn.Parameter(nn.init.xavier_uniform_(torch.Tensor(1, batch_size, self.hidden_dim).type(torch.FloatTensor)), requires_grad=True).cuda()
         # Conv and relu
         self.conv1 = torch.nn.Conv2d(1, 32,  (3, 3), stride=(1, 2), padding = 0)
         self.conv2 = torch.nn.Conv2d(32, 48, (3, 4), stride=(1, 2), padding = 0)
@@ -65,9 +65,9 @@ class TransducerModel(nn.Module):
             out_transcript, _ = self.transcription_gru(X, self.hidden_trascription)
             transcript_dist = self.hidden2density_transcript(out_transcript)
             return transcript_dist
-        batch_size = 2
+        batch_size = 8
         X.unsqueeze_(1)
-        #print(X.shape)
+        print(X.shape)
         in_ffts = self.conv1(X)
         in_ffts = self.relu(in_ffts)
         #print(in_ffts.shape)
