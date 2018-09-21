@@ -53,7 +53,7 @@ def train_transducer(rnn_layers, learning_rate):
         cost_tstep_sum = 0
         pbar = ProgressBar()
         for sample_batched in pbar(data_loader):
-            optimizer.zero_grad()
+            optimizer.zero_grad(losslossloss)
             padded_X, padded_Y, seq_labels, indices, lengths = sample_batched
             X_lengths, Y_lengths = lengths
             if (X_lengths[0] > 2500):
@@ -71,14 +71,19 @@ def train_transducer(rnn_layers, learning_rate):
             prob_matrix.requires_grad_(True)
             cost = transducer_loss(prob_matrix, seq_labels, X_lengths, Y_lengths)
             cost.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 300)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.75)
             optimizer.step()
             #print(cost)
             cost_epoch_sum += float(cost)
             # Backprop, update gradients
-
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': cost_epoch_sum / 34000,
+            }, "home/grigorii/model_dicts/transducer_epoch_%d" % epoch)
         # TODO: Decoding
-        print("Avg cost per epoch: ", cost_epoch_sum / 50000)
+        print("Avg cost per epoch: ", cost_epoch_sum / 34000)
         """
         print("***************************")
         print("PREDICTION")
@@ -98,8 +103,11 @@ def train_transducer(rnn_layers, learning_rate):
         print("***************************")
         """
 while(True):
-    learning_rates = [1e-4, 1e-3]
-    num_rnn_layers = [2, 3]
+#    learning_rates = [1e-4, 1e-3]
+#    num_rnn_layers = [2, 3]
+    learning_rates = [1e-4]
+    num_rnn_layers = [2]
+
     for rnn_layers in num_rnn_layers:
         for learning_rate in learning_rates:
             #while True:

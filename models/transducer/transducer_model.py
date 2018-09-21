@@ -67,7 +67,6 @@ class TransducerModel(nn.Module):
             return transcript_dist
         batch_size = 8
         X.unsqueeze_(1)
-        print(X.shape)
         in_ffts = self.conv1(X)
         in_ffts = self.relu(in_ffts)
         #print(in_ffts.shape)
