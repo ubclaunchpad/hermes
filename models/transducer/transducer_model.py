@@ -65,7 +65,7 @@ class TransducerModel(nn.Module):
             out_transcript, _ = self.transcription_gru(X, self.hidden_trascription)
             transcript_dist = self.hidden2density_transcript(out_transcript)
             return transcript_dist
-        batch_size = 8
+        batch_size = 4
         X.unsqueeze_(1)
         in_ffts = self.conv1(X)
         in_ffts = self.relu(in_ffts)
@@ -84,6 +84,8 @@ class TransducerModel(nn.Module):
         out_transcript, _ = torch.nn.utils.rnn.pad_packed_sequence(out_transcript, batch_first=True)
         # Should be Batch x T x Alphabet
         transcript_dist = self.hidden2density_transcript(out_transcript)
+        if (torch.isnan(transcript_dist).any()):
+            print("SOME NANS")
         return transcript_dist
 
     def prediction_net(self, Y, Y_lengths = []):

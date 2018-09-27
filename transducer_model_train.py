@@ -20,7 +20,7 @@ def train_transducer(rnn_layers, learning_rate):
     norm_transform = Normalize(dataset)
     decoder = RNNTransducer(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
-    batch_size = 8
+    batch_size = 4
 
     data_loader = DataLoader(dataset, collate_fn = dataset.merge_batches, batch_size = batch_size, shuffle = True)
     print("dataset len")
@@ -44,8 +44,11 @@ def train_transducer(rnn_layers, learning_rate):
 
     transducer_loss = transducer.TransducerLoss(blank_label = 0)
     count = 0
-    print("Begin training")
-    for epoch in range(60):
+    checkpoint = torch.load("/home/grigorii/model_dicts/transducer_epoch_31.pt")
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    print("Model loaded, begin training")
+    for epoch in range(32, 60):
         print("***************************")
         print("EPOCH NUM %d" % epoch)
         print("***************************")
@@ -53,7 +56,7 @@ def train_transducer(rnn_layers, learning_rate):
         cost_tstep_sum = 0
         pbar = ProgressBar()
         for sample_batched in pbar(data_loader):
-            optimizer.zero_grad(losslossloss)
+            optimizer.zero_grad()
             padded_X, padded_Y, seq_labels, indices, lengths = sample_batched
             X_lengths, Y_lengths = lengths
             if (X_lengths[0] > 2500):
@@ -81,7 +84,7 @@ def train_transducer(rnn_layers, learning_rate):
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': cost_epoch_sum / 34000,
-            }, "home/grigorii/model_dicts/transducer_epoch_%d" % epoch)
+            }, "/home/grigorii/model_dicts/transducer_epoch_%d.pt" % epoch)
         # TODO: Decoding
         print("Avg cost per epoch: ", cost_epoch_sum / 34000)
         """
