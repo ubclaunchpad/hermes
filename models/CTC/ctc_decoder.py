@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import copy
 
 class CTCDecoder():
 
@@ -11,11 +12,12 @@ class CTCDecoder():
             alphabet        - a dictionary with characters as keys and their
                               ids as values (one to one correspondence)
         """
-        self.alphabet = alphabet
-        self.alphabet[''] = 0
+        self.alphabet = copy.deepcopy(alphabet)
+        self.alphabet[''] = 29
         self.alphabet_reverse = {}
         for key, value in self.alphabet.items():
             self.alphabet_reverse[value] = key
+        self.alphabet_size = len(self.alphabet)
 
     def eval_forward_prob(self, output_timeseries, label):
         """ Finds the CTC score for the string label given the RNN output distributions

@@ -13,10 +13,22 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-batch_size = 2
+batch_size = 8
 
-def train_ctc():
-    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5')
+call_num = 0
+
+# Dimention of FFTs
+input_dim = 128
+
+# Dimention of hidden state
+hidden_dim = 256
+
+# Alphabet size with a blank
+output_dim = 30
+
+
+def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -25,27 +37,16 @@ def train_ctc():
     print(dataset.__len__())
     print("\nDataset loading completed\n")
 
-    # Dimention of FFTs
-    input_dim = 128
-
-    # Dimention of hidden state
-    hidden_dim = 256
-
-    # Alphabet size with a blank
-    output_dim = 30
-
-    learning_rate = 1e-4
-
-    model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
+    model = CTCModel(input_dim, hidden_dim, output_dim, rnn_num_layers, batch_size)
     model.to(device)
 
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
-    ctc_loss = CTCLoss(blank=0)
+    ctc_loss = CTCLoss(blank = output_dim - 1)
     count = 0
     print("Begin training")
-    for epoch in range(50):
+    for epoch in range(200):
         print("***************************")
         print("EPOCH NUM %d" % epoch)
         print("***************************")
@@ -59,41 +60,34 @@ def train_ctc():
             # Get the distributions
             padded_X = padded_X.cuda()
             log_probs = model(padded_X, X_lengths)
-            log_probs = log_probs.transpose(0, 1)
 
+            log_probs = log_probs.transpose(0, 1)
             log_probs.requires_grad_(True)
-            seq_labels = torch.cat(seq_labels)
-            cost = ctc_loss(log_probs, seq_labels, X_lengths, Y_lengths)
+            cost = ctc_loss(log_probs.float(), seq_labels, (((X_lengths - 8) // 2) - 2) // 2, Y_lengths)
             cost.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 600)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
             optimizer.step()
             print(cost)
-            # Backprop, update gradients
+            cost_epoch_sum += float(cost)
 
         print("***************************")
         print("PREDICTION")
+        model = model.eval()
         xseq, yseq = dataset[0]
-        xseq = torch.FloatTensor([xseq], device = device)
-        xseq = norm_transform(xseq)
-        print(type(xseq))
-        print(xseq)
-        log_probs = model(xseq.float().cuda())
+        xseq = torch.FloatTensor([xseq])
+        xseq = norm_transform(xseq.cuda())
+        log_probs = model(xseq.cuda())
         logprobs_numpy = log_probs[0].data.cpu().numpy()
-        for row in logprobs_numpy:
-            print(row)
         decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
+        model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
-        print(decoded_seq[0])
+        print("Avg cost per epoch: ", cost_epoch_sum / 4076)
         print("***************************")
-
-train_ctc()
-
-
 
 """
 def train_ctc():
-    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5')
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -111,9 +105,9 @@ def train_ctc():
     # Alphabet size with a blank
     output_dim = 30
 
-    learning_rate = 1e-4
+    learning_rate = 1e-3
 
-    model = CTCModel(input_dim, hidden_dim, output_dim, batch_size)
+    model = CTCModel(inThanks. I am closing this because torch.isnan() is now available thanks to #5273 and torch.nan is not really important (torch.tensor(float('nan')) works if it is required).put_dim, hidden_dim, output_dim, batch_size)
     model.to(device)
 
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
@@ -162,3 +156,15 @@ def train_ctc():
         print(decoded_seq[0])
         print("***************************")
 """
+
+while(True):
+    learning_rates = [1e-3, 1e-4]
+    num_rnn_layers = [2, 3]
+    for rnn_layers in num_rnn_layers:
+        for learning_rate in learning_rates:
+            while True:
+                try:
+                    train_ctc(rnn_layers, learning_rate)
+                    break
+                except Exception:
+                    print("caught nan")
