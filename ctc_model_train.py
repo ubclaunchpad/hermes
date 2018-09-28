@@ -172,9 +172,4 @@ while(True):
     num_rnn_layers = [2]
     for rnn_layers in num_rnn_layers:
         for learning_rate in learning_rates:
-            while True:
-                try:
-                    train_ctc(rnn_layers, learning_rate)
-                    break
-                except Exception:
-                    print("caught nan")
+            train_ctc(rnn_layers, learning_rate)
