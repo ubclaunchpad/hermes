@@ -64,6 +64,9 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
             padded_X, seq_labels, X_lengths, Y_lengths = sample_batched
             if (len(X_lengths) < batch_size):
                 break
+            if (X_lengths[0] > 2500):
+                continue
+
             # Get the distributions
             padded_X = padded_X.cuda()
             log_probs = model(padded_X, X_lengths)
