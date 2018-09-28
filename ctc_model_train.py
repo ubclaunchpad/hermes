@@ -45,6 +45,10 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
 
     ctc_loss = CTCLoss(blank = output_dim - 1)
     count = 0
+    #checkpoint = torch.load("/home/grigorii/model_dicts/transducer_epoch_42.pt")
+    #model.load_state_dict(checkpoint['model_state_dict'])
+    #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
     print("Begin training")
     for epoch in range(200):
         print("***************************")
@@ -63,12 +67,18 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
 
             log_probs = log_probs.transpose(0, 1)
             log_probs.requires_grad_(True)
-            cost = ctc_loss(log_probs.float(), seq_labels, (((X_lengths - 8) // 2) - 2) // 2, Y_lengths)
+            cost = ctc_loss(log_probs.float(), seq_labels, (X_lengths - 6) // 2, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
             optimizer.step()
             print(cost)
             cost_epoch_sum += float(cost)
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': cost_epoch_sum / 34000,
+            }, "/home/grigorii/model_dicts_ctc/ctc_epoch_%d.pt" % epoch)
 
         print("***************************")
         print("PREDICTION")
@@ -158,8 +168,8 @@ def train_ctc():
 """
 
 while(True):
-    learning_rates = [1e-3, 1e-4]
-    num_rnn_layers = [2, 3]
+    learning_rates = [1e-3]
+    num_rnn_layers = [2]
     for rnn_layers in num_rnn_layers:
         for learning_rate in learning_rates:
             while True:

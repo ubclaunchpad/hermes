@@ -28,16 +28,6 @@ class TransducerModel(nn.Module):
         self.conv3 = torch.nn.Conv2d(48, 4, (3, 3), stride=(2, 2), padding = 0)
 
     def forward(self, X, Y, indices = (), lengths = ()):
-        if (indices == ()):
-            transcript_dist = self.transcription_net(X)
-            predict_dist = self.prediction_net(Y)
-            predict_dist = predict_dist.unsqueeze(dim = 1)
-            transcript_dist = transcript_dist.unsqueeze(dim = 2)
-            prob_density = predict_dist + transcript_dist
-            prob_density = self.relu(prob_density)
-            prob_density = self.density2softmax(prob_density)
-            prob_density_normalized = F.log_softmax(prob_density, dim = 3)
-            return prob_density_normalized, ()
         X_seq_indices, Y_seq_indices = indices
         X_lengths, Y_lengths = lengths
         # Run transcription network
@@ -84,8 +74,6 @@ class TransducerModel(nn.Module):
         out_transcript, _ = torch.nn.utils.rnn.pad_packed_sequence(out_transcript, batch_first=True)
         # Should be Batch x T x Alphabet
         transcript_dist = self.hidden2density_transcript(out_transcript)
-        if (torch.isnan(transcript_dist).any()):
-            print("SOME NANS")
         return transcript_dist
 
     def prediction_net(self, Y, Y_lengths = []):
@@ -101,9 +89,25 @@ class TransducerModel(nn.Module):
         predict_dist = self.hidden2density_pred(out_prediction)
         return predict_dist
 
-    def infer():
+    def infer(self, X):
         """
             Predict the label
         """
-        encode()
-        pass
+        batch_size = 1
+        X.unsqueeze_(0)
+        X.unsqueeze_(1)
+
+        in_ffts = self.conv1(X)
+        in_ffts = self.relu(in_ffts)
+        #print(in_ffts.shape)
+        in_ffts = self.conv2(in_ffts)
+        in_ffts = self.relu(in_ffts)
+        #print(in_ffts.shape)
+        in_ffts = self.conv3(in_ffts)
+        X = torch.transpose(in_ffts, 1, 2)
+        seq_len, filter, feat = X.shape[1], X.shape[2], X.shape[3]
+        X = X.contiguous().view(batch_size, seq_len, filter * feat)
+        out_transcript, _ = self.transcription_gru(X, self.hidden_trascription[:, :1, :].contiguous())
+        # Should be Batch x T x Alphabet
+        transcript_dist = self.hidden2density_transcript(out_transcript)
+        return transcript_dist

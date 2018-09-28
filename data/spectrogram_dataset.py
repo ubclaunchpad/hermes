@@ -79,6 +79,34 @@ class SpectrogramDataset(Dataset):
         lengths = (torch.IntTensor(X_lengths[X_seq_indices]), torch.IntTensor(Y_lengths[Y_seq_indices]))
         return padded_X, torch.FloatTensor(padded_Y), seq_labels, indices, lengths
 
+    def generate_test(self):
+        """
+            Stacks multiple sequences into a minibatch suitable for training
+        """
+        x, y = self[0]
+        x = torch.FloatTensor(x)
+        x = self.transform(x.cuda())
+        """
+        X_lengths = np.zeros(batch_size, dtype = "int")
+        X_lengths[0] = 1
+        # Find lengths of feature and label sequences
+        longest_seq_x = max(X_lengths)
+        # In descending orderFloatTensor
+        X_seq_indices = np.argsort(-X_lengths)
+        # Batch is represented as batch_size x longest_sequence x feature_dim
+        padded_X = torch.zeros((batch_size, longest_seq_x, 128)).type(torch.FloatTensor)
+        seq_labels = [0] * batch_size
+        # copy over the actual sequences
+        for i, seq_num in enumerate(X_seq_indices):
+            sequence = torch.FloatTensor(batch[i])
+            x_len = X_lengths[seq_num]
+            sequence = self.transform(sequence.cuda())
+            padded_X[i, 0:x_len, :] = sequence[:x_len, :]
+        lengths = (torch.IntTensor(X_lengths[X_seq_indices]))
+        """
+        return x, y
+
+
 class Normalize(object):
 
     def __init__(self, dataset, samples = 100):
