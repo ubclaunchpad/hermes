@@ -74,7 +74,7 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
             optimizer.step()
-            print(cost)
+            #print(cost)
             cost_epoch_sum += float(cost)
         torch.save({
             'epoch': epoch,
@@ -95,7 +95,7 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
         model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
-        print("Avg cost per epoch: ", cost_epoch_sum / 4076)
+        print("Avg cost per epoch: ", cost_epoch_sum / 34000)
         print("***************************")
 
 """
