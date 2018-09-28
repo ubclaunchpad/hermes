@@ -9,6 +9,8 @@ import torch.optim as optim
 from models.CTC.ctc_model import CTCModel
 from models.CTC.ctc_decoder import CTCDecoder
 from torch.utils.data import DataLoader
+from progressbar import ProgressBar
+
 # Select the proper device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -56,7 +58,8 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
         print("***************************")
         cost_epoch_sum = 0
         cost_tstep_sum = 0
-        for i_batch, sample_batched in enumerate(data_loader):
+        pbar = ProgressBar()
+        for sample_batched in pbar(data_loader):
             optimizer.zero_grad()
             padded_X, seq_labels, X_lengths, Y_lengths = sample_batched
             if (len(X_lengths) < batch_size):
