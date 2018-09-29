@@ -83,7 +83,7 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'loss': cost_epoch_sum / 34000,
+            'loss': cost_epoch_sum / 25000,
             }, "/home/grigorii/model_dicts_ctc/ctc_epoch_%d.pt" % epoch)
 
         print("***************************")
@@ -98,7 +98,7 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
         model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
-        print("Avg cost per epoch: ", cost_epoch_sum / 34000)
+        print("Avg cost per epoch: ", cost_epoch_sum / 25000)
         print("***************************")
 
 
