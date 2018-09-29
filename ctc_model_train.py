@@ -30,7 +30,7 @@ output_dim = 30
 
 
 def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
-    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
+    dataset = SpectrogramDataset('data/CommonVoice/valid_test.h5', pretrain = True, model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -51,6 +51,74 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
     #model.load_state_dict(checkpoint['model_state_dict'])
     #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
+    print("Begin training")
+    for epoch in range(120):
+        print("***************************")
+        print("EPOCH NUM %d" % epoch)
+        print("***************************")
+        cost_epoch_sum = 0
+        cost_tstep_sum = 0
+        pbar = ProgressBar()
+        for sample_batched in pbar(data_loader):
+            optimizer.zero_grad()
+            padded_X, seq_labels, X_lengths, Y_lengths = sample_batched
+            if (len(X_lengths) < batch_size):
+                break
+            if (X_lengths[0] > 2500):
+                continue
+
+            # Get the distributions
+            padded_X = padded_X.cuda()
+            log_probs = model(padded_X, X_lengths)
+
+            log_probs = log_probs.transpose(0, 1)
+            log_probs.requires_grad_(True)
+            cost = ctc_loss(log_probs.float(), seq_labels, (X_lengths - 6) // 2, Y_lengths)
+            cost.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
+            optimizer.step()
+            #print(cost)
+            cost_epoch_sum += float(cost)
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': cost_epoch_sum / 4000,
+            }, "/home/grigorii/model_dicts_ctc_2/ctc_pretrain_epoch_%d.pt" % epoch)
+
+        print("***************************")
+        print("PREDICTION")
+        model = model.eval()
+        xseq, yseq = dataset[0]
+        xseq = torch.FloatTensor([xseq])
+        xseq = norm_transform(xseq.cuda())
+        log_probs = model(xseq.cuda())
+        logprobs_numpy = log_probs[0].data.cpu().numpy()
+        decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
+        model = model.train()
+        print("Ground truth: ", yseq)
+        print("Prediction: ", decoded_seq)
+        print("Avg cost per epoch: ", cost_epoch_sum / 4000)
+        print("***************************")
+
+    print("=======================================================")
+    print("END PRETRAINING")
+    print("=======================================================")
+
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
+    dataset.set_transform(norm_transform)
+    data_loader = DataLoader(dataset, collate_fn = dataset.merge_batches, batch_size = batch_size, shuffle = True)
+    print("dataset len")
+    print(dataset.__len__())
+    print("\nDataset loading completed\n")
+
+    model = CTCModel(input_dim, hidden_dim, output_dim, rnn_num_layers, batch_size)
+    model.to(device)
+
+    count = 0
+    #checkpoint = torch.load("/home/grigorii/model_dicts/transducer_epoch_42.pt")
+    #model.load_state_dict(checkpoint['model_state_dict'])
+    #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     print("Begin training")
     for epoch in range(200):
         print("***************************")
@@ -84,7 +152,7 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': cost_epoch_sum / 25000,
-            }, "/home/grigorii/model_dicts_ctc/ctc_epoch_%d.pt" % epoch)
+            }, "/home/grigorii/model_dicts_ctc_2/ctc_epoch_%d.pt" % epoch)
 
         print("***************************")
         print("PREDICTION")
@@ -100,6 +168,7 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
         print("Prediction: ", decoded_seq)
         print("Avg cost per epoch: ", cost_epoch_sum / 25000)
         print("***************************")
+
 
 
 def generate_sample(wav_file):
@@ -129,7 +198,7 @@ def test_ctc():
     print(decoded_seq[0])
     print("***************************")
 
-test_ctc()
+#test_ctc()
 
 while(True):
     learning_rates = [1e-3]
