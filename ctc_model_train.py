@@ -101,77 +101,35 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
         print("Avg cost per epoch: ", cost_epoch_sum / 34000)
         print("***************************")
 
-"""
-def train_ctc():
+
+def generate_sample(wav_file):
+    signal, sample_rate = sf.read(wav_file)
+    # generate chroma spectogram using params
+    chroma = librosa.feature.melspectrogram(y=signal, sr=sample_rate, n_fft = 400, hop_length = 160)
+
+
+def test_ctc():
     dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
-    data_loader = DataLoader(dataset, collate_fn = dataset.merge_batches, batch_size = batch_size, shuffle = True)
     print("dataset len")
     print(dataset.__len__())
     print("\nDataset loading completed\n")
-
-    # Dimention of FFTs
-    input_dim = 128
-
-    # Dimention of hidden state
-    hidden_dim = 256
-
-    # Alphabet size with a blank
-    output_dim = 30
-
-    learning_rate = 1e-3
-
-    model = CTCModel(inThanks. I am closing this because torch.isnan() is now available thanks to #5273 and torch.nan is not really important (torch.tensor(float('nan')) works if it is required).put_dim, hidden_dim, output_dim, batch_size)
+    model = CTCModel(input_dim, hidden_dim, output_dim, rnn_num_layers, batch_size)
     model.to(device)
+    xseq, yseq = dataset[0]
+    xseq = torch.FloatTensor([xseq], device = device)
+    xseq = norm_transform(xseq)
+    log_probs = model(xseq.float().cuda(), train = False)
+    logprobs_numpy = log_probs[0].data.cpu().numpy()
+    decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
+    print("Ground truth: ", yseq)
+    print("Prediction: ", decoded_seq)
+    print(decoded_seq[0])
+    print("***************************")
 
-    #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-    ctc_loss = CTCLoss(blank=0)
-    count = 0
-    print("Begin training")
-    for epoch in range(50):
-        print("***************************")
-        print("EPOCH NUM %d" % epoch)
-        print("***************************")
-        cost_epoch_sum = 0
-        cost_tstep_sum = 0
-        for i in range(500):
-            optimizer.zero_grad()
-            xseq, yseq = dataset[0]
-            xseq = torch.FloatTensor([xseq], device = device)
-            xseq = norm_transform(xseq)
-            log_probs = model(xseq.float().cuda())
-            log_probs = log_probs.transpose(0, 1)
-            label = torch.IntTensor([dataset.char_to_ix[char] for char in yseq])
-            log_probs.requires_grad_(True)
-            probs_sizes = torch.IntTensor([log_probs.shape[0]])
-            label_sizes = torch.IntTensor([label.shape[0]])
-            cost = ctc_loss(log_probs, label, probs_sizes, label_sizes)
-            cost.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 600)
-            optimizer.step()
-            print(cost)
-            # Backprop, update gradients
-        print("***************************")
-        print("PREDICTION")
-        xseq, yseq = dataset[0]
-        xseq = torch.FloatTensor([xseq], device = device)
-        xseq = norm_transform(xseq)
-        print(type(xseq))
-        print(xseq)
-        log_probs = model(xseq.float().cuda(), train = False)
-        logprobs_numpy = log_probs[0].data.cpu().numpy()
-        for row in logprobs_numpy:
-            print(row)
-        decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
-        print("Ground truth: ", yseq)
-        print("Prediction: ", decoded_seq)
-        print(decoded_seq[0])
-        print("***************************")
-"""
+test_ctc()
 
 while(True):
     learning_rates = [1e-3]
