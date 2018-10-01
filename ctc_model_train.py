@@ -9,6 +9,8 @@ import torch.optim as optim
 from models.CTC.ctc_model import CTCModel
 from models.CTC.ctc_decoder import CTCDecoder
 from torch.utils.data import DataLoader
+from progressbar import ProgressBar
+
 # Select the proper device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -28,7 +30,7 @@ output_dim = 30
 
 
 def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
-    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
+    dataset = SpectrogramDataset('data/CommonVoice/valid_test.h5', pretrain = True, model_ctc = True)
     norm_transform = Normalize(dataset)
     decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
@@ -45,30 +47,44 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
 
     ctc_loss = CTCLoss(blank = output_dim - 1)
     count = 0
+    #checkpoint = torch.load("/home/grigorii/model_dicts/transducer_epoch_42.pt")
+    #model.load_state_dict(checkpoint['model_state_dict'])
+    #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
     print("Begin training")
-    for epoch in range(200):
+    for epoch in range(120):
         print("***************************")
         print("EPOCH NUM %d" % epoch)
         print("***************************")
         cost_epoch_sum = 0
         cost_tstep_sum = 0
-        for i_batch, sample_batched in enumerate(data_loader):
+        pbar = ProgressBar()
+        for sample_batched in pbar(data_loader):
             optimizer.zero_grad()
             padded_X, seq_labels, X_lengths, Y_lengths = sample_batched
             if (len(X_lengths) < batch_size):
                 break
+            if (X_lengths[0] > 2500):
+                continue
+
             # Get the distributions
             padded_X = padded_X.cuda()
             log_probs = model(padded_X, X_lengths)
 
             log_probs = log_probs.transpose(0, 1)
             log_probs.requires_grad_(True)
-            cost = ctc_loss(log_probs.float(), seq_labels, (((X_lengths - 8) // 2) - 2) // 2, Y_lengths)
+            cost = ctc_loss(log_probs.float(), seq_labels, (X_lengths - 6) // 2, Y_lengths)
             cost.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
             optimizer.step()
-            print(cost)
+            #print(cost)
             cost_epoch_sum += float(cost)
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': cost_epoch_sum / 4000,
+            }, "/home/grigorii/model_dicts_ctc_2/ctc_pretrain_epoch_%d.pt" % epoch)
 
         print("***************************")
         print("PREDICTION")
@@ -82,89 +98,111 @@ def train_ctc(rnn_num_layers = 2, learning_rate = 1e-3):
         model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
-        print("Avg cost per epoch: ", cost_epoch_sum / 4076)
+        print("Avg cost per epoch: ", cost_epoch_sum / 4000)
         print("***************************")
 
-"""
-def train_ctc():
+    print("=======================================================")
+    print("END PRETRAINING")
+    print("=======================================================")
+
     dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
-    norm_transform = Normalize(dataset)
-    decoder = CTCDecoder(dataset.char_to_ix)
     dataset.set_transform(norm_transform)
     data_loader = DataLoader(dataset, collate_fn = dataset.merge_batches, batch_size = batch_size, shuffle = True)
     print("dataset len")
     print(dataset.__len__())
     print("\nDataset loading completed\n")
 
-    # Dimention of FFTs
-    input_dim = 128
-
-    # Dimention of hidden state
-    hidden_dim = 256
-
-    # Alphabet size with a blank
-    output_dim = 30
-
-    learning_rate = 1e-3
-
-    model = CTCModel(inThanks. I am closing this because torch.isnan() is now available thanks to #5273 and torch.nan is not really important (torch.tensor(float('nan')) works if it is required).put_dim, hidden_dim, output_dim, batch_size)
+    model = CTCModel(input_dim, hidden_dim, output_dim, rnn_num_layers, batch_size)
     model.to(device)
 
-    #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-    ctc_loss = CTCLoss(blank=0)
     count = 0
+    #checkpoint = torch.load("/home/grigorii/model_dicts/transducer_epoch_42.pt")
+    #model.load_state_dict(checkpoint['model_state_dict'])
+    #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     print("Begin training")
-    for epoch in range(50):
+    for epoch in range(200):
         print("***************************")
         print("EPOCH NUM %d" % epoch)
         print("***************************")
         cost_epoch_sum = 0
         cost_tstep_sum = 0
-        for i in range(500):
+        pbar = ProgressBar()
+        for sample_batched in pbar(data_loader):
             optimizer.zero_grad()
-            xseq, yseq = dataset[0]
-            xseq = torch.FloatTensor([xseq], device = device)
-            xseq = norm_transform(xseq)
-            log_probs = model(xseq.float().cuda())
+            padded_X, seq_labels, X_lengths, Y_lengths = sample_batched
+            if (len(X_lengths) < batch_size):
+                break
+            if (X_lengths[0] > 2500):
+                continue
+
+            # Get the distributions
+            padded_X = padded_X.cuda()
+            log_probs = model(padded_X, X_lengths)
+
             log_probs = log_probs.transpose(0, 1)
-            label = torch.IntTensor([dataset.char_to_ix[char] for char in yseq])
             log_probs.requires_grad_(True)
-            probs_sizes = torch.IntTensor([log_probs.shape[0]])
-            label_sizes = torch.IntTensor([label.shape[0]])
-            cost = ctc_loss(log_probs, label, probs_sizes, label_sizes)
+            cost = ctc_loss(log_probs.float(), seq_labels, (X_lengths - 6) // 2, Y_lengths)
             cost.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 600)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 20)
             optimizer.step()
-            print(cost)
-            # Backprop, update gradients
+            #print(cost)
+            cost_epoch_sum += float(cost)
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': cost_epoch_sum / 25000,
+            }, "/home/grigorii/model_dicts_ctc_2/ctc_epoch_%d.pt" % epoch)
+
         print("***************************")
         print("PREDICTION")
+        model = model.eval()
         xseq, yseq = dataset[0]
-        xseq = torch.FloatTensor([xseq], device = device)
-        xseq = norm_transform(xseq)
-        print(type(xseq))
-        print(xseq)
-        log_probs = model(xseq.float().cuda(), train = False)
+        xseq = torch.FloatTensor([xseq])
+        xseq = norm_transform(xseq.cuda())
+        log_probs = model(xseq.cuda())
         logprobs_numpy = log_probs[0].data.cpu().numpy()
-        for row in logprobs_numpy:
-            print(row)
         decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
+        model = model.train()
         print("Ground truth: ", yseq)
         print("Prediction: ", decoded_seq)
-        print(decoded_seq[0])
+        print("Avg cost per epoch: ", cost_epoch_sum / 25000)
         print("***************************")
-"""
+
+
+
+def generate_sample(wav_file):
+    signal, sample_rate = sf.read(wav_file)
+    # generate chroma spectogram using params
+    chroma = librosa.feature.melspectrogram(y=signal, sr=sample_rate, n_fft = 400, hop_length = 160)
+
+
+def test_ctc():
+    dataset = SpectrogramDataset('data/CommonVoice/valid_train.h5', model_ctc = True)
+    norm_transform = Normalize(dataset)
+    decoder = CTCDecoder(dataset.char_to_ix)
+    dataset.set_transform(norm_transform)
+    print("dataset len")
+    print(dataset.__len__())
+    print("\nDataset loading completed\n")
+    model = CTCModel(input_dim, hidden_dim, output_dim, rnn_num_layers, batch_size)
+    model.to(device)
+    xseq, yseq = dataset[0]
+    xseq = torch.FloatTensor([xseq], device = device)
+    xseq = norm_transform(xseq)
+    log_probs = model(xseq.float().cuda(), train = False)
+    logprobs_numpy = log_probs[0].data.cpu().numpy()
+    decoded_seq, _ = decoder.beam_search_decoding(log_probs[0].data.cpu().numpy(), beam_size = 100)
+    print("Ground truth: ", yseq)
+    print("Prediction: ", decoded_seq)
+    print(decoded_seq[0])
+    print("***************************")
+
+#test_ctc()
 
 while(True):
-    learning_rates = [1e-3, 1e-4]
-    num_rnn_layers = [2, 3]
+    learning_rates = [1e-3]
+    num_rnn_layers = [2]
     for rnn_layers in num_rnn_layers:
         for learning_rate in learning_rates:
-            while True:
-                try:
-                    train_ctc(rnn_layers, learning_rate)
-                    break
-                except Exception:
-                    print("caught nan")
+            train_ctc(rnn_layers, learning_rate)

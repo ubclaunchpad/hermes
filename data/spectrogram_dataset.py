@@ -10,7 +10,7 @@ class SpectrogramDataset(Dataset):
         PyTorch dataset for fetching data batches from data stored in HDF5 format
     """
 
-    def __init__(self, hdf5_location, model_ctc = False):
+    def __init__(self, hdf5_location, pretrain = False, model_ctc = False):
         self.char_to_ix = {'a' : 0, 'b' : 1, 'c' : 2, 'd':  3,
                             'e': 4, 'f': 5, 'g': 6, 'h':7, 'i':8, 'j': 9, 'k': 10,
                             'l': 11, 'm' : 12, 'n' : 13, 'o':14, 'p':15, 'q':16, 'r':17, 's':18, 't':19,
@@ -18,9 +18,12 @@ class SpectrogramDataset(Dataset):
         self.hdf5 = h5py.File(hdf5_location, 'r')
         self.model_ctc = model_ctc
         self.myidx = 0
+        self.pretrain = pretrain
 
     def __len__(self):
-        return 34000
+        if (self.pretrain):
+            return 3800
+        return 25000
 
     def __getitem__(self, idx):
         flat = np.concatenate(self.hdf5["train_data"][idx],  axis = 0)
@@ -78,6 +81,34 @@ class SpectrogramDataset(Dataset):
         indices = (X_seq_indices, Y_seq_indices)
         lengths = (torch.IntTensor(X_lengths[X_seq_indices]), torch.IntTensor(Y_lengths[Y_seq_indices]))
         return padded_X, torch.FloatTensor(padded_Y), seq_labels, indices, lengths
+
+    def generate_test(self):
+        """
+            Stacks multiple sequences into a minibatch suitable for training
+        """
+        x, y = self[0]
+        x = torch.FloatTensor(x)
+        x = self.transform(x.cuda())
+        """
+        X_lengths = np.zeros(batch_size, dtype = "int")
+        X_lengths[0] = 1
+        # Find lengths of feature and label sequences
+        longest_seq_x = max(X_lengths)
+        # In descending orderFloatTensor
+        X_seq_indices = np.argsort(-X_lengths)
+        # Batch is represented as batch_size x longest_sequence x feature_dim
+        padded_X = torch.zeros((batch_size, longest_seq_x, 128)).type(torch.FloatTensor)
+        seq_labels = [0] * batch_size
+        # copy over the actual sequences
+        for i, seq_num in enumerate(X_seq_indices):
+            sequence = torch.FloatTensor(batch[i])
+            x_len = X_lengths[seq_num]
+            sequence = self.transform(sequence.cuda())
+            padded_X[i, 0:x_len, :] = sequence[:x_len, :]
+        lengths = (torch.IntTensor(X_lengths[X_seq_indices]))
+        """
+        return x, y
+
 
 class Normalize(object):
 
